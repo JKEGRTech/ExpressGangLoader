@@ -1,0 +1,215 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{AABCE1AF-FAEB-482A-8821-99413FA7B617}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>ExpressGangLoader</RootNamespace>
+    <AssemblyName>ExpressGangLoader</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <WarningLevel>4</WarningLevel>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>ExpressGangLoaderICON.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="ComponentPro.Common">
+      <HintPath>GM DLL\Manufacture API DLL\ComponentPro.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="ComponentPro.FileSystem">
+      <HintPath>GM DLL\Manufacture API DLL\ComponentPro.FileSystem.dll</HintPath>
+    </Reference>
+    <Reference Include="ComponentPro.Network">
+      <HintPath>GM DLL\Manufacture API DLL\ComponentPro.Network.dll</HintPath>
+    </Reference>
+    <Reference Include="ComponentPro.NetworkSecure">
+      <HintPath>GM DLL\Manufacture API DLL\ComponentPro.NetworkSecure.dll</HintPath>
+    </Reference>
+    <Reference Include="ComponentPro.SecureShell">
+      <HintPath>GM DLL\Manufacture API DLL\ComponentPro.SecureShell.dll</HintPath>
+    </Reference>
+    <Reference Include="ComponentPro.Sftp">
+      <HintPath>GM DLL\Manufacture API DLL\ComponentPro.Sftp.dll</HintPath>
+    </Reference>
+    <Reference Include="ComponentPro.Shell">
+      <HintPath>GM DLL\Manufacture API DLL\ComponentPro.Shell.dll</HintPath>
+    </Reference>
+    <Reference Include="ComponentPro.Ssh">
+      <HintPath>GM DLL\Manufacture API DLL\ComponentPro.Ssh.dll</HintPath>
+    </Reference>
+    <Reference Include="Extron.CDA">
+      <HintPath>GM DLL\PCS DLL\Extron.CDA.dll</HintPath>
+    </Reference>
+    <Reference Include="Extron.Communication.Services, Version=2.5.0.170, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>GM DLL\Manufacture API DLL\Extron.Communication.Services.dll</HintPath>
+    </Reference>
+    <Reference Include="Extron.Communication.Services.Base, Version=2.5.0.170, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>GM DLL\Manufacture API DLL\Extron.Communication.Services.Base.dll</HintPath>
+    </Reference>
+    <Reference Include="Extron.GlobalMessaging, Version=2.5.0.170, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>GM DLL\Manufacture API DLL\Extron.GlobalMessaging.dll</HintPath>
+    </Reference>
+    <Reference Include="Extron.GlobalMessaging.Base">
+      <HintPath>GM DLL\Manufacture API DLL\Extron.GlobalMessaging.Base.dll</HintPath>
+    </Reference>
+    <Reference Include="Extron.Pro.Communication, Version=2.5.0.170, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>GM DLL\Manufacture API DLL\Extron.Pro.Communication.dll</HintPath>
+    </Reference>
+    <Reference Include="Extron.Pro.Communication.Contracts, Version=2.5.0.170, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>GM DLL\Manufacture API DLL\Extron.Pro.Communication.Contracts.dll</HintPath>
+    </Reference>
+    <Reference Include="Extron.Pro.Communication.Security.Contracts, Version=2.0.10.1002, Culture=neutral, PublicKeyToken=ad20e99311a1a7d5, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>GM DLL\Manufacture API DLL\Extron.Pro.Communication.Security.Contracts.dll</HintPath>
+    </Reference>
+    <Reference Include="Extron.Pro.Communication.Security.Control">
+      <HintPath>GM DLL\Manufacture API DLL\Extron.Pro.Communication.Security.Control.dll</HintPath>
+    </Reference>
+    <Reference Include="Extron.Pro.Communication.Security.Library">
+      <HintPath>GM DLL\Manufacture API DLL\Extron.Pro.Communication.Security.Library.dll</HintPath>
+    </Reference>
+    <Reference Include="Extron.Pro.Configuration.System">
+      <HintPath>GM DLL\Manufacture API DLL\Extron.Pro.Configuration.System.dll</HintPath>
+    </Reference>
+    <Reference Include="ExtronCorLib, Version=4.2.1.25, Culture=neutral, PublicKeyToken=ad20e99311a1a7d5, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>GM DLL\PCS DLL\ExtronCorLib.dll</HintPath>
+    </Reference>
+    <Reference Include="MaterialDesignColors, Version=1.2.0.325, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\MaterialDesignColors.1.2.0\lib\net45\MaterialDesignColors.dll</HintPath>
+    </Reference>
+    <Reference Include="MaterialDesignThemes.Wpf, Version=2.6.0.325, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\MaterialDesignThemes.2.6.0\lib\net45\MaterialDesignThemes.Wpf.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>GM DLL\Manufacture API DLL\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xaml">
+      <RequiredTargetFramework>4.0</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="TE.Module, Version=2.0.3.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\TE.Module\TE.Module\bin\Release\TE.Module.dll</HintPath>
+    </Reference>
+    <Reference Include="WindowsBase" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+  </ItemGroup>
+  <ItemGroup>
+    <ApplicationDefinition Include="App.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </ApplicationDefinition>
+    <Compile Include="Commands\CommandBase.cs" />
+    <Compile Include="Commands\RelayCommand.cs" />
+    <Compile Include="ErrorCatch\ExpressFWLoaderError.cs" />
+    <Compile Include="Model\MainModel.cs" />
+    <Compile Include="SupportClass\UDPLegacyDeviceDiscoveryService.cs" />
+    <Compile Include="ViewModel\DialogVM\FixtureSettingDialogViewModel.cs" />
+    <Compile Include="ViewModel\MainVM.cs" />
+    <Compile Include="ViewModel\SystemVerifyingVM.cs" />
+    <Compile Include="View\Dialog\FixtureSettingDialog.xaml.cs">
+      <DependentUpon>FixtureSettingDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="View\SystemVerify\SystemVerifyView.xaml.cs">
+      <DependentUpon>SystemVerifyView.xaml</DependentUpon>
+    </Compile>
+    <Page Include="MainWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Compile Include="App.xaml.cs">
+      <DependentUpon>App.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="MainWindow.xaml.cs">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Page Include="View\Dialog\FixtureSettingDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="View\SystemVerify\SystemVerifyView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <None Include="packages.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="ExpressGangLoaderICON.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icon\ExpressGangLoaderICON.ico" />
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
