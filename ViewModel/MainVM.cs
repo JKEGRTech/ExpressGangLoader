@@ -1,4 +1,4 @@
-﻿using ExpressGangLoader.Commands;
+using ExpressGangLoader.Commands;
 using ExpressGangLoader.ErrorCatch;
 using ExpressGangLoader.Model;
 using ExpressGangLoader.View.Dialog;
@@ -237,6 +237,14 @@ namespace ExpressGangLoader.ViewModel
         #endregion
 
         #region Execute Command
+        /// <summary>
+        /// Step 1 : Enable progress bar
+        /// Step 2 : Clear UUTsList 
+        /// Step 3 : Clear Legacy Unit Statistics report
+        /// Step 4 : Check if User select Legacy or Linux Type of loading firmware
+        /// Step 5 : Start discovery timer count down
+        /// </summary>
+        /// <param name="parameter"></param>
         private void SearchExecute(object parameter)
         {
             try
@@ -288,6 +296,15 @@ namespace ExpressGangLoader.ViewModel
             }
 
         }
+
+        /// <summary>
+        /// Step 1 : Delete current file in FW folder
+        /// Step 2 : Open Dialog window 
+        /// Step 3 : Switch file type between .eff and .s19 base on unit loading type
+        /// Step 4 : Copy Seleted FW file to local machine
+        /// Step 5 : Update UI status to let user know software ready for uploading fw
+        /// </summary>
+        /// <param name="parameter"></param>
         private void BrowseFileExecute(object parameter)
         {
             try
@@ -350,11 +367,23 @@ namespace ExpressGangLoader.ViewModel
             }
 
         }
+
+        /// <summary>
+        /// Step 1 : Run ClearARP method
+        /// </summary>
+        /// <param name="parameter"></param>
         private void ClearArpExecute(object parameter)
         {
             Console.WriteLine("ClearArpExecute");
             ClearARP();
         }
+
+        /// <summary>
+        /// Step 1 : Enable progress bar
+        /// Step 2 : run backgroundworker methor to release application from main thread 
+        /// Step 3 : LongRunningBackgroundWork will determin which type of loading method to run and execute the appropriate method
+        /// </summary>
+        /// <param name="parameter"></param>
         private void ProgramExecute(object parameter)
         {
             try
@@ -388,11 +417,16 @@ namespace ExpressGangLoader.ViewModel
                 ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("ProgramExecute", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
             }
         }
+
+        /// <summary>
+        /// Step 1 : Check for connection to fixture
+        /// </summary>
+        /// <param name="parameter"></param>
         private async void ExecuteFixtureSettingDialog(object parameter)
         {
             //Set up a MVVM
             try
-            {
+            {   
                 var view = new FixtureSettingDialog
                 {
                     DataContext = new FixtureSettingDialogViewModel()
@@ -495,42 +529,71 @@ namespace ExpressGangLoader.ViewModel
         }
         #endregion
 
-        #region Method       
-        //Background Worker to change IP
+        #region Method  
+        /// <summary>
+        /// First step in loading FW
+        /// Background Worker to change IP and run Loading type method
+        /// Step 1 : Mode 5 Reset uut with Serial Number
+        /// Step 2 : Setting Static IP address to all UUT using ArpHelper function
+        /// Step 3 : Run ClearARP Method => provide clean arp table to work with
+        /// Step 4 : Verify UUT is set with static IP by look it up using MAC Address
+        /// Step 5 : Run ClearARP Method => provide clean arp table to work with
+        /// Step 6 : Base  on UUT type, run Linux prorgaming typr or Legacy Programming Type
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         void LongRunningBackgroundWork(object sender, DoWorkEventArgs e)
         {
             try
             {
-                if(Linux_LegacyCheckCommand)
+                #region Step 1 : Mode 5 Reset uut with Serial Number
+                if (Linux_LegacyCheckCommand)
                 {
                     //Run Mode 5 reset to all Linux UUT
                     LinuxUUT_Mode5_SerialNumber();
                 }
-                else 
+
+                else
                 {
                     //Run Mode 5 reset to all Legacy UUT
                     LegacyUUT_Mode5_SerialNumber();
                 }
+                #endregion
+
+                #region Step 2 : Setting Static IP address to all UUT using ArpHelper function
                 //Setting IP for UUTs in the network
                 foreach (MainModel item in UUTsList)
                 {
                     item.FWUpdateStatus = "Setting IP";
+                    //App.Current.Dispatcher.Invoke(delegate // <--- HERE
+                    //{
+                    //    item.FWUpdateStatus = "Setting IP";
+                    //});
                     string uutMAC = item.MacAddress; // Parse MAC from list to local value
                     string SetIP = emptyIPCheck();
                     ArpHelper.SetIPAddrTest(SetIP, uutMAC, 10000, SubNet);
                 }
+                #endregion
+
+                #region Step 3 : Run ClearARP Method => provide clean arp table to work with
+                //Run ClearArp to clean cache
+                ClearARP();
+                #endregion
+
+                #region Step 4 : Verify UUT is set with static IP by look it up using MAC Address
                 // Verifying Connection with UUT in the network
                 // look for current IP using uutMAC                                                                   
-                // run PingTest with new IP address - 3 times                                                                    
-                // If each failed - Wait 3 second and ping again                                                                   
+                // run PingTest with new IP address - 4 times                                                                    
+                // If each failed - Wait 8 second and ping again                                                                   
                 // If pass, break - and add to tempList                                                                   
-                // If failed all 3 ping -> failed uut with failed ping status
+                // If failed all  ping -> failed uut with failed ping status
                 foreach (MainModel item in UUTsList)
                 {
-                    App.Current.Dispatcher.Invoke(delegate // <--- HERE
-                    {
-                        item.FWUpdateStatus = "Verifying New IP";
-                    });
+                    item.FWUpdateStatus = "Verifying New IP";
+                    //App.Current.Dispatcher.Invoke(delegate // <--- HERE
+                    //{
+                    //    item.FWUpdateStatus = "Verifying New IP";
+                    //});
                     string uutMAC = item.MacAddress; // Parse MAC from list to local value
                     string uutIP = ArpHelper.ResolveIpAddress(uutMAC); // look up IP using MAC   
                     Console.WriteLine(uutMAC + "---" + uutIP);
@@ -545,7 +608,6 @@ namespace ExpressGangLoader.ViewModel
                         }
                         else
                         {
-
                             Thread.Sleep(8000);
                         }
                     }
@@ -566,13 +628,21 @@ namespace ExpressGangLoader.ViewModel
 
                     }
                 }
+                #endregion
+
+                #region Step 5 : Run ClearARP Method => provide clean arp table to work with
+                //Run ClearArp to clean cache
+                ClearARP();
+                #endregion
+
+                #region  Step 6 : Base  on UUT type, run Linux prorgaming typr or Legacy Programming Type
+
+
                 //Depend on the UUT type, 2 seperate process will happen to program the UUT
                 //Running Linux Type Program
                 if (Linux_LegacyCheckCommand)
                 {
 
-                    //when complete Clear Arp to remove save cache
-                    ClearARP();
                     Console.WriteLine("Program Linux UUT");
                     //Adding devInforNo for programming from UUTsList
                     foreach (MainModel devitems in UUTsList)
@@ -600,14 +670,11 @@ namespace ExpressGangLoader.ViewModel
                 //Running Legacy Type Program
                 else
                 {
-                    /// 1. Run ClearArp to remove saved cache
-                    /// 2. Run LegacyUUT_ExtronFWLoader to load FW
-                    /// 3. Run LegacyUUT_UUTQuerryResetDefaultIP to query FW version and Mode 5 reset
-                    /// 4. Run usedIP.Clear to clear all used IP address for next programming batch
-                    /// 5. Run SetIP_bw.Dispose to clear out used memory
-                    //when complete Clear Arp to remove save cache
-                    ClearARP();
-                    Console.WriteLine("Program Legacy UUT");                    
+                    /// 1. Run LegacyUUT_ExtronFWLoader to load FW
+                    /// 2. Run LegacyUUT_UUTQuerryResetDefaultIP to query FW version and Mode 5 reset
+                    /// 3. Run usedIP.Clear to clear all used IP address for next programming batch
+                    /// 4. Run SetIP_bw.Dispose to clear out used memory                    
+                    Console.WriteLine("Program Legacy UUT");
                     //run ExtronFWLoader to program Legacy UUT
                     LegacyUUT_ExtronFWLoader();
                     LegacyUUT_UUTQuerryResetDefaultIP();
@@ -617,6 +684,8 @@ namespace ExpressGangLoader.ViewModel
                     FWUploadRecord();
                     IsIndeterminateReturn = false; // progressbar
                 }
+
+                #endregion
 
             }
             catch (Exception er)
@@ -630,8 +699,8 @@ namespace ExpressGangLoader.ViewModel
 
                 ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("LongRunningBackgroundWork", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
             }
-
         }
+
         //Verifying and Completed the Background Worker
         void LongRunningBackgroundWorkCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
@@ -648,6 +717,647 @@ namespace ExpressGangLoader.ViewModel
             }
         }
 
+        #region General Method
+        //ping IP address Test        
+        public bool PingTest(string pingvalue)
+        {
+            bool status = true;
+            try
+            {
+                Ping ping = new Ping();
+                PingReply pingresult = ping.Send(pingvalue);
+                //If Ping and return respond -> Is assigned to a device
+                if (pingresult.Status.ToString() == "Success")
+                {
+                    return status = true;
+                }
+                //else IP is not assigned to a device
+                else
+                {
+                    return status = false;
+                }
+            }
+            catch (Exception e)
+            {
+                string InnerErrorMessage = "";
+                string ErrorMessage = string.Concat(e.Message.ToString(), e.StackTrace.ToString());
+                if (e.InnerException != null)
+                {
+                    InnerErrorMessage = string.Concat(e.InnerException.Message.ToString(), e.InnerException.StackTrace.ToString());
+                }
+
+                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("PingTest", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
+            }
+            return status;
+        }
+
+        //check for empty IP address
+        public string emptyIPCheck()
+        {
+            string readyIP = "";
+            bool FoundIP = true;
+            try
+            {
+                while (FoundIP)
+                {
+                    string TempIP = IPset + IPChange.ToString(); // Set IP 192.168.254.XXX to tempIP to check for availability                
+                                                                 //Ping the new IP to check for it availability               
+                                                                 //If Ping and return respond -> IP address was taken -> need new one
+                    if (PingTest(TempIP))
+                    {
+                        if (!usedIP.Contains(TempIP))
+                        {
+                            usedIP.Add(TempIP);
+                        }
+                        IPChange++;
+                    }
+                    //else Return no respond-> set IP as open IP for UUT
+                    //Check if current IP was used before from usedIP list
+                    //if not set this as open IP
+                    //else check the next IP value
+                    else
+                    {
+                        if (!usedIP.Contains(TempIP))
+                        {
+                            usedIP.Add(TempIP);
+                            readyIP = TempIP;
+                            FoundIP = false;
+                        }
+                        else
+                        {
+                            FoundIP = true;
+                            IPChange++;
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                string InnerErrorMessage = "";
+                string ErrorMessage = string.Concat(e.Message.ToString(), e.StackTrace.ToString());
+                if (e.InnerException != null)
+                {
+                    InnerErrorMessage = string.Concat(e.InnerException.Message.ToString(), e.InnerException.StackTrace.ToString());
+                }
+
+                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("emptyIPCheck", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
+            }
+            return readyIP;
+        }
+
+        //Discovery Stop
+        void DiscoveryTimer_Tick(object sender, EventArgs e)
+        {
+            Console.WriteLine("TimeOut");
+            _iDiscoveryService.Enabled = false;
+            LegacyDeviceDiscoveryService.Enable = false;
+            IsIndeterminateReturn = false;
+            DiscoveryTimer.Stop();
+
+        }
+
+        //StopDiscovery Method
+        void StopDiscoveryUUT()
+        {
+            //Stop Discovery after 7 second
+            DiscoveryTimer.Interval = new TimeSpan(0, 0, 7);
+            DiscoveryTimer.Tick += DiscoveryTimer_Tick;
+        }
+
+        //Linux or Legacy Selected Method
+        void LinuxOrLegacy(bool toggleData)
+        {
+            if (toggleData)
+            {
+                Linux_LegacyTypeCommand = "LINUX";
+            }
+            else
+            {
+                Linux_LegacyTypeCommand = "LEGACY";
+            }
+        }
+
+        //Getting SerialNumber of UUT from Avante using MACaddress
+        private string MACaddressToSerialNumberFromAvante(string macaddress)
+        {
+            string[] avanteresponded = avanteconnect.GetAvanteInfo(macaddress, "", true, false);
+            string SNfromMAC = avanteresponded[2].ToString().Substring(0, 7);
+            return SNfromMAC;
+        }
+
+        //ClearArp
+        void ClearARP()
+        {
+            try
+            {
+                Process cleararp = new Process();
+                ProcessStartInfo startInfo = new ProcessStartInfo();
+                startInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                startInfo.FileName = "cmd.exe";
+                startInfo.Verb = "runas";
+                cleararp.StartInfo = startInfo;
+                cleararp.StartInfo.RedirectStandardOutput = true;
+                cleararp.StartInfo.RedirectStandardInput = true;
+                cleararp.StartInfo.UseShellExecute = false;
+                try
+                {
+                    cleararp.Start();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex);
+                    return;
+                }
+                StreamWriter sw = cleararp.StandardInput;
+                sw.WriteLine("netsh interface ipv4 delete arpcache"); // Arp  Clearn Cache
+                sw.WriteLine("netsh interface ipv4 delete destinationcache"); // Arp Clearn Dest Cache
+                sw.Close();
+                cleararp.WaitForExit();
+                //Console.WriteLine(cleararp.StandardOutput.ReadToEnd());
+            }
+            catch (Exception e)
+            {
+                string InnerErrorMessage = "";
+                string ErrorMessage = string.Concat(e.Message.ToString(), e.StackTrace.ToString());
+                if (e.InnerException != null)
+                {
+                    InnerErrorMessage = string.Concat(e.InnerException.Message.ToString(), e.InnerException.StackTrace.ToString());
+                }
+
+                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("emptyIPCheck", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
+            }
+        }
+        #endregion
+       
+        #region Legacy Unit
+        //Calling argHandler to flag searching for Legacy Devices
+        void LegacyDeviceList()
+        {
+            //Trigger the event in DiscoveryServiceCLass
+            LegacyDeviceDiscoveryService.eventHasBeenRaised += new UDPLegacyDeviceDiscoveryService.argHandler(myFunction);
+        }
+
+        //Access Argument parameter and add them to UUTsList
+        void myFunction(object n, UDPLegacyDeviceDiscoveryService.DiscoveredDeviceArgs e)
+        {
+            // Check if Current Discovered List contain any duplicate
+            App.Current.Dispatcher.Invoke(delegate // <--- HERE
+            {
+                if (UUTsList.Any(InListData => InListData.MacAddress == e.messageData.MacAddress) == false)
+                {
+                    if (!FixtureDeviceIP.Contains(e.messageData.IPaddress))
+                    {
+                        UUTsList.Add(new MainModel(e.messageData.Hostname,
+                                     e.messageData.IPaddress,
+                                     e.messageData.MacAddress,
+                                     "",
+                                     e.messageData.PartNumber,
+                                     e.messageData.SerialNumber,
+                                     e.messageData.FirmwareVersion,
+                                     "Connected",
+                                     Password,
+                                     UserName,
+                                     booltlptli,
+                                     "",
+                                     0,
+                                     Visibility.Visible,
+                                     Visibility.Collapsed,
+                                     Visibility.Collapsed));
+                        LegacyUploaderService_StatisticsChanged(1); // report total number of UUT detected from UDP broadcast
+                        //Stop old timer and start new timer when new Device detected
+                        DiscoveryTimer.Stop();
+                        DiscoveryTimer.Start();
+                    }
+                }
+            });
+        }
+
+        //Launch ExtronLoader using CMD and input data
+        void LegacyUUT_ExtronFWLoader()
+        {
+            try
+            {
+                bool executeupload = true;
+                Parallel.ForEach(UUTsList, item =>
+                {
+                    DnsEndPoint dnsEndpoint = new DnsEndPoint(item.IpAddress, 23);
+                    TelnetSettings ts = new TelnetSettings(dnsEndpoint, item.Password);
+                    ExtronDevice ed = new ExtronDevice(ts);
+                    var connectState = ed.Connect(10000, ExtronDevice.ConnectionBehavior.Block);
+                    item.FWUpdateStatus = "Verifying Connection to UUT";
+                    if (connectState == ExtronDevice.DeviceState.Connected)
+                    {
+                        // use cda command to load firmware
+                        // note: blocking for testing purposes
+                        SupportedDevices supportedDevices = new SupportedDevices();
+                        CDAFirmwareUploadSession cDAFirmwareUploadSession = new CDAFirmwareUploadSession(supportedDevices.SelectedList, "");
+                        cDAFirmwareUploadSession.AddDevice(ed);
+                        var bytes = File.ReadAllBytes(FWFileName);
+                        string Firmwaretypecase = FWloaderDevice_MethodLoadType(ed.PartNumber);
+                        switch (Firmwaretypecase)
+                        {
+                            case "IPL_TYPE":
+                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.IPL_TYPE); //IPL_Type
+                                break;
+                            case "LINUX_TYPE":
+                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.LINUX_TYPE); //LINUX_TYPE
+                                break;
+                            case "UNIVERSAL_TYPE":
+                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.UNIVERSAL_TYPE); //UNIVERSAL_TYPE
+                                break;
+                            case "STELLARIS_TYPE":
+                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.STELLARIS_TYPE); //STELLARIS_TYPE
+                                break;
+                            case "VSC_TYPE":
+                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.VSC_TYPE); //VSC_TYPE
+                                break;
+                            case "MPS_TYPE":
+                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.MPS_TYPE); //MPS_TYPE
+                                break;
+                            case "NEW_MPS_TYPE":
+                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.NEW_MPS_TYPE); //NEW_MPS_TYPE
+                                break;
+                            case "CARD_TYPE":
+                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.CARD_TYPE); //CARD_TYPE
+                                break;
+                            case "IDM_TYPE":
+                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.IDM_TYPE); //IDM_TYPE
+                                break;
+                            case "ARCHIVE_TYPE":
+                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.ARCHIVE_TYPE); //ARCHIVE_TYPE
+                                break;
+                            case "IN_TYPE":
+                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.IN_TYPE); //IN_TYPE
+                                break;
+                            case "IPL_LRG_BIN_TYPE":
+                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.IPL_LRG_BIN_TYPE); //IPL_LRG_BIN_TYPE
+                                break;
+                            default:
+                                item.FWUpdateStatus = Firmwaretypecase;
+                                executeupload = false;
+                                break;
+                        }
+                        if (executeupload)
+                        {
+                            item.FWUpdateStatus = "Uploading";
+                            cDAFirmwareUploadSession.DeviceTransferProgress += CDAFirmwareUploadSession_DeviceTransferProgress;
+                            cDAFirmwareUploadSession.DeviceUploadCompleted += CDAFirmwareUploadSession_DeviceUploadCompleted;
+                            cDAFirmwareUploadSession.DeviceFailedToConnect += CDAFirmwareUploadSession_DeviceFailedToUpload;
+                            cDAFirmwareUploadSession.DeviceFailedToUpload += CDAFirmwareUploadSession_DeviceFailedToUpload;
+                            cDAFirmwareUploadSession.Upload();
+                        }
+
+                    }
+                    else
+                    {
+                        item.FWUpdateStatus = connectState.ToString();
+                    }
+                });
+            }
+            catch (Exception er)
+            {
+                string InnerErrorMessage = "";
+                string ErrorMessage = string.Concat(er.Message.ToString(), er.StackTrace.ToString());
+                if (er.InnerException != null)
+                {
+                    InnerErrorMessage = string.Concat(er.InnerException.Message.ToString(), er.InnerException.StackTrace.ToString());
+                }
+                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("LegacyUUT_ExtronFWLoader", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
+            }
+        }
+
+        //checking FirmwareLoaderDeviceList for the loadMethod
+        private string FWloaderDevice_MethodLoadType(string uutPN)
+        {
+            string FWLoaderDeviceDirectory = System.AppDomain.CurrentDomain.BaseDirectory + "ExpressGangLoaderDeviceList\\ExpressGangLoaderDevices.xml";
+            //const string FWLoaderDeviceDirectory = @"C:\Users\Public\Documents\Extron\DeviceList\Devices.xml";
+            string methoType = null;
+            string uutlvl = uutPN.Substring(0, 2);
+            string uutlvlidentifier = uutPN.Substring(3, 4);
+            if (uutlvlidentifier.Contains("-"))
+            {
+                uutlvlidentifier = uutlvlidentifier.Replace("-", "");
+            }
+            uutPN = uutlvl + "-" + uutlvlidentifier;
+            try
+            {
+                XDocument deviceListXML;
+                XmlTextReader xmlReader;
+                using (xmlReader = new XmlTextReader(FWLoaderDeviceDirectory))
+                {
+                    deviceListXML = XDocument.Load(xmlReader, LoadOptions.PreserveWhitespace);
+                    foreach (var device in deviceListXML.Descendants("Device"))
+                    {
+                        if (device.FirstAttribute.Value.Contains(uutPN))
+                        {
+                            methoType = device.FirstAttribute.NextAttribute.NextAttribute.Value; ;
+                            break;
+                        }
+                        else
+                        {
+                            methoType = "No PN found in DeviceList";
+                        }
+                    }
+                }
+            }
+            catch (Exception er)
+            {
+                string InnerErrorMessage = "";
+                string ErrorMessage = string.Concat(er.Message.ToString(), er.StackTrace.ToString());
+                if (er.InnerException != null)
+                {
+                    InnerErrorMessage = string.Concat(er.InnerException.Message.ToString(), er.InnerException.StackTrace.ToString());
+                }
+
+                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("FWloaderDevice_MethodLoadType", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
+            }
+            return methoType;
+        }
+
+        //Reset Legacy Devices using ARP_Helper
+        void LegacyUUT_UUTQuerryResetDefaultIP()
+        {
+            try
+            {
+                int index = 0;
+                //Reset IP for LegacyUUTs in the network
+                //step 1 : create Telnet Communication with UUT
+                //step 2 : Sent SIS *Q<ENTER> to query UUT FW
+                //step 3 : Sent SIS <ESC>ZQQQ<ENTER> to performce Mode5 reset
+                //Step 4 : Catch exception due to disconnect from local network to default network
+                //Setp 5 : Ping default IP to verify mode 5 reset successfull
+
+
+                //Query the UUT FW with static IP
+                Parallel.ForEach(UUTsList, item =>
+                {
+                    bool uutconnectingawait = true;
+                    DnsEndPoint dnsEndpoint = new DnsEndPoint(item.IpAddress, 23);
+                    TelnetSettings ts = new TelnetSettings(dnsEndpoint, item.Password);
+                    ExtronDevice ed = new ExtronDevice(ts);
+                    SISCommand sISCommand = new SISCommand("*Q" + "\x0D");
+                    while (uutconnectingawait)
+                    {
+                        int value = ++index;
+                        var connectState = ed.Connect(10000, ExtronDevice.ConnectionBehavior.Block);
+                        item.FWUpdateStatus = "Await Connection";
+                        if (connectState == ExtronDevice.DeviceState.Connected)
+                        {
+                            uutconnectingawait = false;
+                        }
+                        if (value > 5)
+                        {
+                            break;
+                        }
+                    }
+                    if (!uutconnectingawait)
+                    {
+                        var uutQueryFW = ed.SendSISCommand(sISCommand, ExtronDevice.ConnectionBehavior.Block);
+                        if (item.Version != uutQueryFW.StrResponse)
+                        {
+                            item.Version = uutQueryFW.StrResponse;
+                        }
+                        item.FWUpdateStatus = "Successful";
+                        ed.Disconnect();
+                    }
+
+                });
+
+                //Reset UUT 
+                Parallel.ForEach(UUTsList, item =>
+                {
+                    DnsEndPoint dnsEndpoint = new DnsEndPoint(item.IpAddress, 23);
+                    TelnetSettings ts = new TelnetSettings(dnsEndpoint, item.Password);
+                    ExtronDevice ed = new ExtronDevice(ts);
+                    var connectState = ed.Connect(10000, ExtronDevice.ConnectionBehavior.Block);
+                    SISCommand sISCommand = new SISCommand("\x1B" + "ZQQQ" + "\x0D");
+                    if (connectState == ExtronDevice.DeviceState.Connected)
+                    {
+                        item.IpAddress = item.DefaultIP;
+                        ed.SendSISCommandAsync(sISCommand);
+                    }
+                    else
+                    {
+                        item.FWUpdateStatus = "Failled to Reset UUT";
+                    }
+
+                });
+            }
+            catch (Exception er)
+            {
+                string InnerErrorMessage = "";
+                string ErrorMessage = string.Concat(er.Message.ToString(), er.StackTrace.ToString());
+                if (er.InnerException != null)
+                {
+                    InnerErrorMessage = string.Concat(er.InnerException.Message.ToString(), er.InnerException.StackTrace.ToString());
+                }
+
+                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("LegacyUUT_UUTQuerryResetDefaultIP", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
+            }
+        }
+
+        // Occurs when individual fw upgrade progress changed for Legacy Product
+        void CDAFirmwareUploadSession_DeviceTransferProgress(object sender, Extron.Communication.FirmwareTransfer.DeviceFirmwareProgress e)
+        {
+            try
+            {
+                Parallel.ForEach(UUTsList, item =>
+                {
+                    if (item.IpAddress == e.Device.ToString().Replace("ExtronDevice: ", "").Replace(":23", ""))
+                    {
+                        item.FWProgressStatus = e.PercentageCompleted;
+                    }
+                });
+            }
+            catch (Exception a)
+            {
+                string InnerErrorMessage = "";
+                string ErrorMessage = string.Concat(a.Message.ToString(), a.StackTrace.ToString());
+                if (a.InnerException != null)
+                {
+                    InnerErrorMessage = string.Concat(a.InnerException.Message.ToString(), a.InnerException.StackTrace.ToString());
+                }
+                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("CDAFirmwareUploadSession_DeviceTransferProgress", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
+            }
+        }
+
+        // Occurs when individual legacy device upgrade completed
+        void CDAFirmwareUploadSession_DeviceUploadCompleted(object sender, ExtronDevice device)
+        {
+            try
+            {
+                Parallel.ForEach(UUTsList, item =>
+                {
+                    if (item.IpAddress == device.TelnetSetting.HostDnsEndPoint.Host.ToString())
+                    {
+                        item.Version = device.FirmwareVersion;
+                    }
+                });
+            }
+            catch (Exception a)
+            {
+                string InnerErrorMessage = "";
+                string ErrorMessage = string.Concat(a.Message.ToString(), a.StackTrace.ToString());
+                if (a.InnerException != null)
+                {
+                    InnerErrorMessage = string.Concat(a.InnerException.Message.ToString(), a.InnerException.StackTrace.ToString());
+                }
+
+                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("CDAFirmwareUploadSession_DeviceUploadCompleted", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
+            }
+        }
+
+        // Occurs when individual legacy device Failed to Upload
+        void CDAFirmwareUploadSession_DeviceFailedToUpload(object sender, FailedDevice device)
+        {
+            try
+            {
+                foreach (MainModel item in UUTsList)
+                {
+                    if (item.IpAddress == device.Device.TelnetSetting.HostDnsEndPoint.Host.ToString())
+                    {
+                        string a = device.Status.ToString();
+                        if (device.Status.ToString() == "FailedToVerifyUpload")
+                        {
+                            item.FWUpdateStatus = "FAIL - Await for Record";
+                            item.progressVisibility = Visibility.Collapsed;
+                            item.PassVisibility = Visibility.Collapsed;
+                            item.FailVisibility = Visibility.Visible;
+                            new Task(() =>
+                            {
+                                FailedDeviceList(item.PartNumber, item.SerialNumber, item.MacAddress, device.Status.ToString(), device.Status.ToString());
+
+                            }).Start();
+                        }
+                        else
+                        {
+                            item.FWUpdateStatus = "Successful";
+                        }
+                    }
+                }
+            }
+            catch (Exception a)
+            {
+                string InnerErrorMessage = "";
+                string ErrorMessage = string.Concat(a.Message.ToString(), a.StackTrace.ToString());
+                if (a.InnerException != null)
+                {
+                    InnerErrorMessage = string.Concat(a.InnerException.Message.ToString(), a.InnerException.StackTrace.ToString());
+                }
+
+                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("CDAFirmwareUploadSession_DeviceFailedToUpload", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
+            }
+        }
+
+        // Occurs when there changes in process
+        void LegacyUploaderService_StatisticsChanged(int staticttypechanged)
+        {
+            try
+            {
+                if (staticttypechanged == 1)
+                {
+                    TotalUUTReport++;
+                }
+                if (staticttypechanged == 2)
+                {
+                    SuccessReport++;
+                    InProgressReport -= 1;
+                }
+                if (staticttypechanged == 3)
+                {
+                    FailedReport++;
+                    InProgressReport -= 1;
+                }
+                if (staticttypechanged == 4)
+                {
+                    InProgressReport++;
+                }
+                if (staticttypechanged == 5)
+                {
+                    TotalUUTReport = 0;
+                    SuccessReport = 0;
+                    FailedReport = 0;
+                    InProgressReport = 0;
+                }
+            }
+            catch (Exception a)
+            {
+                string InnerErrorMessage = "";
+                string ErrorMessage = string.Concat(a.Message.ToString(), a.StackTrace.ToString());
+                if (a.InnerException != null)
+                {
+                    InnerErrorMessage = string.Concat(a.InnerException.Message.ToString(), a.InnerException.StackTrace.ToString());
+                }
+
+                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("LegacyUploaderService_StatisticsChanged", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
+            }
+
+
+        }
+
+       //PerformceMode5reset of UUT using SerialNumber
+       void LegacyUUT_Mode5_SerialNumber()
+        {
+            try
+            {
+                Parallel.ForEach(UUTsList, item =>
+                {
+                    // Add to Inprogress
+                    LegacyUploaderService_StatisticsChanged(4);
+                    DnsEndPoint dnsEndpoint = new DnsEndPoint(item.IpAddress, 23);
+                    TelnetSettings ts = new TelnetSettings(dnsEndpoint, item.SerialNumber);
+                    ExtronDevice ed = new ExtronDevice(ts);
+                    var connectState = ed.Connect(10000, ExtronDevice.ConnectionBehavior.Block);
+                    SISCommand sISCommand = new SISCommand("\x1B" + "ZQQQ" + "\x0D");
+                    if (connectState == ExtronDevice.DeviceState.Connected)
+                    {
+                        item.FWUpdateStatus = "Reseting UUT";
+                        ed.SendSISCommandAsync(sISCommand);
+                    }
+                    else
+                    {
+                        Console.WriteLine(connectState);
+                    }
+                });
+            }
+            catch (Exception er)
+            {
+                string InnerErrorMessage = "";
+                string ErrorMessage = string.Concat(er.Message.ToString(), er.StackTrace.ToString());
+                if (er.InnerException != null)
+                {
+                    InnerErrorMessage = string.Concat(er.InnerException.Message.ToString(), er.InnerException.StackTrace.ToString());
+                }
+                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("LegacyUUT_Mode5_SerialNumber", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
+            }
+
+
+        }
+
+       //PerformceMode5reset of UUT using DefaultIP
+       void LegacyUUT_Mode5_DefaultIP()
+        {
+            Parallel.ForEach(UUTsList, item =>
+            {
+                DnsEndPoint dnsEndpoint = new DnsEndPoint(item.DefaultIP, 23);
+                TelnetSettings ts = new TelnetSettings(dnsEndpoint, item.Password);
+                ExtronDevice ed = new ExtronDevice(ts);
+                var connectState = ed.Connect(10000, ExtronDevice.ConnectionBehavior.Block);
+                SISCommand sISCommand = new SISCommand("\x1B" + "ZQQQ" + "\x0D");
+                if (connectState == ExtronDevice.DeviceState.Connected)
+                {
+                    item.FWUpdateStatus = "Reseting UUT";
+                    ed.SendSISCommandAsync(sISCommand);
+                }
+                else
+                {
+                    Console.WriteLine(connectState);
+                }
+            });
+        }
+       #endregion
+
+        #region Linux Unit
         // Occurs when a device is discovered
         void _iDiscoveryService_SingleDeviceDiscovered(IDeviceDiscoveryService sender, DiscoveryEventArgs evtArg)
         {
@@ -667,7 +1377,7 @@ namespace ExpressGangLoader.ViewModel
                                 {
                                     booltlptli = true;
                                 }
-                            }                            
+                            }
                             UUTsList.Add(new MainModel(evtArg.Message.Hostname,
                                           evtArg.Message.IpAddress,
                                           evtArg.Message.MacAddress,
@@ -849,7 +1559,7 @@ namespace ExpressGangLoader.ViewModel
                     // Query the respond and update UI
                     IGMCommand IPAddressGMCommand = new IPAddressGMCommand();
                     response = gmService.GetGMCommand(_IPLinkProSSH, IPAddressGMCommand, 10000);
-                    
+
                     //Update UI with new IP Address
                     App.Current.Dispatcher.Invoke(delegate // <--- HERE
                     {
@@ -871,6 +1581,59 @@ namespace ExpressGangLoader.ViewModel
 
         }
 
+        //PerformceMode5reset of UUT using SerialNumber
+        void LinuxUUT_Mode5_SerialNumber()
+        {
+            try
+            {
+                foreach (MainModel item in UUTsList)
+                {
+
+                    IIPLinkProSession _IPLinkProSSH = new IPLinkProSession(IPLinkProAccountTypeEnum.Generic, item.IpAddress, item.UserName, MACaddressToSerialNumberFromAvante(item.MacAddress))
+                    {
+                        DesiredConnectionType = SessionChannelFlag.SSH,
+                        KeepAliveOption = KeepAliveOptionsEnum.Interval,
+                        KeepAliveOptionValue = 5
+                    };
+
+                    // Create a gmService instance for each device
+                    IGMCommService gmService = new GMCommServiceBase();
+
+                    // Reset UUT to default in order to return password to default
+                    IGMCommand AbsoluteResetGMCommand = new AbsoluteResetGMCommand() { ResetMode = AbsoluteResetModeEnum.AbsoluteSystemReset };
+                    IGMCommand response = gmService.GetGMCommand(_IPLinkProSSH, AbsoluteResetGMCommand, 10000);
+
+                    IGMCommand IPAddressGMCommand = new IPAddressGMCommand();
+                    response = gmService.GetGMCommand(_IPLinkProSSH, IPAddressGMCommand, 10000);
+
+                    if (response.Value.ToString() == item.IpAddress)
+                    {
+                        //Update UI with new IP Address
+                        App.Current.Dispatcher.Invoke(delegate // <--- HERE
+                        {
+                            item.IpAddress = response.Value.ToString();
+                        });
+                    }
+                    else
+                    {
+                        //find something to work with
+                    }
+                }
+            }
+            catch (Exception er)
+            {
+                string InnerErrorMessage = "";
+                string ErrorMessage = string.Concat(er.Message.ToString(), er.StackTrace.ToString());
+                if (er.InnerException != null)
+                {
+                    InnerErrorMessage = string.Concat(er.InnerException.Message.ToString(), er.InnerException.StackTrace.ToString());
+                }
+                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("LinuxUUT_Mode5_SerialNumber", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
+            }
+        }
+        #endregion
+
+        #region Last Step after loading FW completed
         //Upload FWRec to the server
         void FWUploadRecord()
         {
@@ -940,197 +1703,6 @@ namespace ExpressGangLoader.ViewModel
             }
 
 
-        }
-
-        //ping IP address Test        
-        public bool PingTest(string pingvalue)
-        {
-            bool status = true;
-            try
-            {
-                Ping ping = new Ping();
-                PingReply pingresult = ping.Send(pingvalue);
-                //If Ping and return respond -> Is assigned to a device
-                if (pingresult.Status.ToString() == "Success")
-                {
-                    return status = true;
-                }
-                //else IP is not assigned to a device
-                else
-                {
-                    return status = false;
-                }
-            }
-            catch (Exception e)
-            {
-                string InnerErrorMessage = "";
-                string ErrorMessage = string.Concat(e.Message.ToString(), e.StackTrace.ToString());
-                if (e.InnerException != null)
-                {
-                    InnerErrorMessage = string.Concat(e.InnerException.Message.ToString(), e.InnerException.StackTrace.ToString());
-                }
-
-                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("PingTest", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
-            }
-            return status;
-        }
-
-        //check for empty IP address
-        public string emptyIPCheck()
-        {
-            string readyIP = "";
-            bool FoundIP = true;
-            try
-            {
-                while (FoundIP)
-                {
-                    string TempIP = IPset + IPChange.ToString(); // Set IP 192.168.254.XXX to tempIP to check for availability                
-                                                                 //Ping the new IP to check for it availability               
-                                                                 //If Ping and return respond -> IP address was taken -> need new one
-                    if (PingTest(TempIP))
-                    {
-                        if (!usedIP.Contains(TempIP))
-                        {
-                            usedIP.Add(TempIP);
-                        }
-                        IPChange++;
-                    }
-                    //else Return no respond-> set IP as open IP for UUT
-                    //Check if current IP was used before from usedIP list
-                    //if not set this as open IP
-                    //else check the next IP value
-                    else
-                    {
-                        if (!usedIP.Contains(TempIP))
-                        {
-                            usedIP.Add(TempIP);
-                            readyIP = TempIP;
-                            FoundIP = false;
-                        }
-                        else
-                        {
-                            FoundIP = true;
-                            IPChange++;
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                string InnerErrorMessage = "";
-                string ErrorMessage = string.Concat(e.Message.ToString(), e.StackTrace.ToString());
-                if (e.InnerException != null)
-                {
-                    InnerErrorMessage = string.Concat(e.InnerException.Message.ToString(), e.InnerException.StackTrace.ToString());
-                }
-
-                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("emptyIPCheck", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
-            }
-            return readyIP;
-        }
-
-        //StopDiscovery Method
-        void StopDiscoveryUUT()
-        {
-            //Stop Discovery after 7 second
-            DiscoveryTimer.Interval = new TimeSpan(0, 0, 7);
-            DiscoveryTimer.Tick += DiscoveryTimer_Tick;
-        }
-
-        //Discovery Stop
-        void DiscoveryTimer_Tick(object sender, EventArgs e)
-        {
-            Console.WriteLine("TimeOut");
-            _iDiscoveryService.Enabled = false;
-            LegacyDeviceDiscoveryService.Enable = false;
-            IsIndeterminateReturn = false;
-            DiscoveryTimer.Stop();
-
-        }
-
-        //Calling argHandler to flag searching for Legacy Devices
-        void LegacyDeviceList()
-        {
-            //Trigger the event in DiscoveryServiceCLass
-            LegacyDeviceDiscoveryService.eventHasBeenRaised += new UDPLegacyDeviceDiscoveryService.argHandler(myFunction);
-        }
-
-        //Access Argument parameter and add them to UUTsList
-        void myFunction(object n, UDPLegacyDeviceDiscoveryService.DiscoveredDeviceArgs e)
-        {
-            // Check if Current Discovered List contain any duplicate
-            App.Current.Dispatcher.Invoke(delegate // <--- HERE
-            {
-                if (UUTsList.Any(InListData => InListData.MacAddress == e.messageData.MacAddress) == false)
-                {
-                    if (!FixtureDeviceIP.Contains(e.messageData.IPaddress))
-                    {
-                        UUTsList.Add(new MainModel(e.messageData.Hostname,
-                                     e.messageData.IPaddress,
-                                     e.messageData.MacAddress,
-                                     "",
-                                     e.messageData.PartNumber,
-                                     e.messageData.SerialNumber,
-                                     e.messageData.FirmwareVersion,
-                                     "Connected",
-                                     Password,
-                                     UserName,
-                                     booltlptli,
-                                     "",
-                                     0,
-                                     Visibility.Visible,
-                                     Visibility.Collapsed,
-                                     Visibility.Collapsed));
-                        LegacyUploaderService_StatisticsChanged(1); // report total number of UUT detected from UDP broadcast
-                        //Stop old timer and start new timer when new Device detected
-                        DiscoveryTimer.Stop();
-                        DiscoveryTimer.Start();
-                    }
-                }
-            });
-        }
-
-        //ClearArp
-        void ClearARP()
-        {
-            try
-            {
-                Process cleararp = new Process();
-                ProcessStartInfo startInfo = new ProcessStartInfo();
-                startInfo.WindowStyle = ProcessWindowStyle.Hidden;
-                startInfo.FileName = "cmd.exe";
-                startInfo.Verb = "runas";
-                cleararp.StartInfo = startInfo;
-                cleararp.StartInfo.RedirectStandardOutput = true;
-                cleararp.StartInfo.RedirectStandardInput = true;
-                cleararp.StartInfo.UseShellExecute = false;
-                try
-                {
-                    cleararp.Start();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex);
-                    return;
-                }
-                StreamWriter sw = cleararp.StandardInput;
-                sw.WriteLine("netsh interface ipv4 delete arpcache"); // Arp  Clearn Cache
-                sw.WriteLine("netsh interface ipv4 delete destinationcache"); // Arp Clearn Dest Cache
-                sw.Close();
-                cleararp.WaitForExit();
-                //Console.WriteLine(cleararp.StandardOutput.ReadToEnd());
-            }
-            catch (Exception e)
-            {
-                string InnerErrorMessage = "";
-                string ErrorMessage = string.Concat(e.Message.ToString(), e.StackTrace.ToString());
-                if (e.InnerException != null)
-                {
-                    InnerErrorMessage = string.Concat(e.InnerException.Message.ToString(), e.InnerException.StackTrace.ToString());
-                }
-
-                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("emptyIPCheck", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
-            }
         }
 
         //UploadRecord for UUTs
@@ -1238,501 +1810,8 @@ namespace ExpressGangLoader.ViewModel
                 ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("FailedDeviceList", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
             }
         }
+        #endregion
 
-        //Linux or Legacy Check Method
-        void LinuxOrLegacy(bool toggleData)
-        {
-            if (toggleData)
-            {
-                Linux_LegacyTypeCommand = "LINUX";
-            }
-            else
-            {
-                Linux_LegacyTypeCommand = "LEGACY";
-            }
-        }
-
-        //PerformceMode5reset of UUT using SerialNumber
-        void LegacyUUT_Mode5_SerialNumber()
-        {
-            try 
-            {
-                Parallel.ForEach(UUTsList, item =>
-                {
-                    // Add to Inprogress
-                    LegacyUploaderService_StatisticsChanged(4);
-                    DnsEndPoint dnsEndpoint = new DnsEndPoint(item.IpAddress, 23);
-                    TelnetSettings ts = new TelnetSettings(dnsEndpoint, item.SerialNumber);
-                    ExtronDevice ed = new ExtronDevice(ts);
-                    var connectState = ed.Connect(10000, ExtronDevice.ConnectionBehavior.Block);
-                    SISCommand sISCommand = new SISCommand("\x1B" + "ZQQQ" + "\x0D");
-                    if (connectState == ExtronDevice.DeviceState.Connected)
-                    {
-                        item.FWUpdateStatus = "Reseting UUT";
-                        ed.SendSISCommandAsync(sISCommand);
-                    }
-                    else
-                    {
-                        Console.WriteLine(connectState);
-                    }
-                });
-            }
-            catch (Exception er)
-            {
-                string InnerErrorMessage = "";
-                string ErrorMessage = string.Concat(er.Message.ToString(), er.StackTrace.ToString());
-                if (er.InnerException != null)
-                {
-                    InnerErrorMessage = string.Concat(er.InnerException.Message.ToString(), er.InnerException.StackTrace.ToString());
-                }
-                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("LegacyUUT_Mode5_SerialNumber", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
-            }
-            
-            
-        }
-
-        //PerformceMode5reset of UUT using SerialNumber
-        void LinuxUUT_Mode5_SerialNumber()
-        {
-            try
-            {
-                foreach (MainModel item in UUTsList)
-                {
-
-                    IIPLinkProSession _IPLinkProSSH = new IPLinkProSession(IPLinkProAccountTypeEnum.Generic, item.IpAddress, item.UserName, MACaddressToSerialNumberFromAvante(item.MacAddress))
-                    {
-                        DesiredConnectionType = SessionChannelFlag.SSH,
-                        KeepAliveOption = KeepAliveOptionsEnum.Interval,
-                        KeepAliveOptionValue = 5
-                    };
-
-                    // Create a gmService instance for each device
-                    IGMCommService gmService = new GMCommServiceBase();
-
-                    // Reset UUT to default in order to return password to default
-                    IGMCommand AbsoluteResetGMCommand = new AbsoluteResetGMCommand() { ResetMode = AbsoluteResetModeEnum.AbsoluteSystemReset };
-                    IGMCommand response = gmService.GetGMCommand(_IPLinkProSSH, AbsoluteResetGMCommand, 10000);
-
-                    IGMCommand IPAddressGMCommand = new IPAddressGMCommand();
-                    response = gmService.GetGMCommand(_IPLinkProSSH, IPAddressGMCommand, 10000);
-
-                    if (response.Value.ToString() == item.IpAddress)
-                    {
-                        //Update UI with new IP Address
-                        App.Current.Dispatcher.Invoke(delegate // <--- HERE
-                        {
-                            item.IpAddress = response.Value.ToString();
-                        });
-                    }
-                    else
-                    {
-                        //find something to work with
-                    }
-                }
-            }
-            catch (Exception er)
-            {
-                string InnerErrorMessage = "";
-                string ErrorMessage = string.Concat(er.Message.ToString(), er.StackTrace.ToString());
-                if (er.InnerException != null)
-                {
-                    InnerErrorMessage = string.Concat(er.InnerException.Message.ToString(), er.InnerException.StackTrace.ToString());
-                }
-                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("LinuxUUT_Mode5_SerialNumber", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
-            }
-        }
-
-        //PerformceMode5reset of UUT using DefaultIP
-        void LegacyUUT_Mode5_DefaultIP()
-        {
-            Parallel.ForEach(UUTsList, item =>
-            {                
-                DnsEndPoint dnsEndpoint = new DnsEndPoint(item.DefaultIP, 23);
-                TelnetSettings ts = new TelnetSettings(dnsEndpoint, item.Password);
-                ExtronDevice ed = new ExtronDevice(ts);
-                var connectState = ed.Connect(10000, ExtronDevice.ConnectionBehavior.Block);
-                SISCommand sISCommand = new SISCommand("\x1B" + "ZQQQ" + "\x0D");
-                if (connectState == ExtronDevice.DeviceState.Connected)
-                {
-                    item.FWUpdateStatus = "Reseting UUT";
-                    ed.SendSISCommandAsync(sISCommand);
-                }
-                else
-                {
-                    Console.WriteLine(connectState);
-                }
-            });
-        }
-
-        //Launch ExtronLoader using CMD and input data
-        void LegacyUUT_ExtronFWLoader()
-        {            
-            try
-            {
-                bool executeupload = true;
-                Parallel.ForEach(UUTsList, item =>
-                {
-                    DnsEndPoint dnsEndpoint = new DnsEndPoint(item.IpAddress, 23);
-                    TelnetSettings ts = new TelnetSettings(dnsEndpoint, item.Password);
-                    ExtronDevice ed = new ExtronDevice(ts);
-                    var connectState = ed.Connect(10000, ExtronDevice.ConnectionBehavior.Block);
-                    item.FWUpdateStatus = "Verifying Connection to UUT";
-                    if (connectState == ExtronDevice.DeviceState.Connected)
-                    {
-                        // use cda command to load firmware
-                        // note: blocking for testing purposes
-                        SupportedDevices supportedDevices = new SupportedDevices();
-                        CDAFirmwareUploadSession cDAFirmwareUploadSession = new CDAFirmwareUploadSession(supportedDevices.SelectedList, "");
-                        cDAFirmwareUploadSession.AddDevice(ed);
-                        var bytes = File.ReadAllBytes(FWFileName);
-                        string Firmwaretypecase = FWloaderDevice_MethodLoadType(ed.PartNumber);
-                        switch (Firmwaretypecase)
-                        {
-                            case "IPL_TYPE":
-                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.IPL_TYPE); //IPL_Type
-                                break;
-                            case "LINUX_TYPE":
-                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.LINUX_TYPE); //LINUX_TYPE
-                                break;
-                            case "UNIVERSAL_TYPE":
-                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.UNIVERSAL_TYPE); //UNIVERSAL_TYPE
-                                break;
-                            case "STELLARIS_TYPE":
-                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.STELLARIS_TYPE); //STELLARIS_TYPE
-                                break;
-                            case "VSC_TYPE":
-                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.VSC_TYPE); //VSC_TYPE
-                                break;
-                            case "MPS_TYPE":
-                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.MPS_TYPE); //MPS_TYPE
-                                break;
-                            case "NEW_MPS_TYPE":
-                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.NEW_MPS_TYPE); //NEW_MPS_TYPE
-                                break;
-                            case "CARD_TYPE":
-                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.CARD_TYPE); //CARD_TYPE
-                                break;
-                            case "IDM_TYPE":
-                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.IDM_TYPE); //IDM_TYPE
-                                break;
-                            case "ARCHIVE_TYPE":
-                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.ARCHIVE_TYPE); //ARCHIVE_TYPE
-                                break;
-                            case "IN_TYPE":
-                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.IN_TYPE); //IN_TYPE
-                                break;
-                            case "IPL_LRG_BIN_TYPE":
-                                cDAFirmwareUploadSession.QueueBuffer(bytes, ed, SupportedDevice.FirmwareType.IPL_LRG_BIN_TYPE); //IPL_LRG_BIN_TYPE
-                                break;
-                            default:
-                                item.FWUpdateStatus = Firmwaretypecase;
-                                executeupload = false;
-                                break;
-                        }
-                        if(executeupload)
-                        {
-                            item.FWUpdateStatus = "Uploading";
-                            cDAFirmwareUploadSession.DeviceTransferProgress += CDAFirmwareUploadSession_DeviceTransferProgress;
-                            cDAFirmwareUploadSession.DeviceUploadCompleted += CDAFirmwareUploadSession_DeviceUploadCompleted;
-                            cDAFirmwareUploadSession.DeviceFailedToConnect += CDAFirmwareUploadSession_DeviceFailedToUpload;
-                            cDAFirmwareUploadSession.DeviceFailedToUpload += CDAFirmwareUploadSession_DeviceFailedToUpload;
-                            cDAFirmwareUploadSession.Upload();
-                        }
-                        
-                    }                    
-                    else
-                    {
-                        item.FWUpdateStatus = connectState.ToString();
-                    }                    
-                });
-            }
-            catch (Exception er)
-            {
-                string InnerErrorMessage = "";
-                string ErrorMessage = string.Concat(er.Message.ToString(), er.StackTrace.ToString());
-                if (er.InnerException != null)
-                {
-                    InnerErrorMessage = string.Concat(er.InnerException.Message.ToString(), er.InnerException.StackTrace.ToString());
-                }
-                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("LegacyUUT_ExtronFWLoader", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
-            }
-        }        
-
-        //checking FirmwareLoaderDeviceList for the loadMethod
-        private string FWloaderDevice_MethodLoadType(string uutPN) 
-        {
-            const string FWLoaderDeviceDirectory = @"C:\Users\Public\Documents\Extron\DeviceList\Devices.xml";
-            string methoType = null;
-            string uutlvl = uutPN.Substring(0, 2);
-            string uutlvlidentifier = uutPN.Substring(3, 4);
-            if(uutlvlidentifier.Contains("-"))
-            {
-                uutlvlidentifier = uutlvlidentifier.Replace("-", "");
-            }
-            uutPN = uutlvl + "-" + uutlvlidentifier;
-            try
-            {
-                XDocument deviceListXML;
-                XmlTextReader xmlReader;
-                using (xmlReader = new XmlTextReader(FWLoaderDeviceDirectory))
-                {
-                    deviceListXML = XDocument.Load(xmlReader, LoadOptions.PreserveWhitespace);
-                    foreach (var device in deviceListXML.Descendants("Device"))
-                    {
-                        if(device.FirstAttribute.Value.Contains(uutPN) )
-                        {
-                            methoType = device.FirstAttribute.NextAttribute.NextAttribute.Value; ;
-                            break;
-                        }
-                        else
-                        {
-                            methoType = "No PN found in DeviceList";
-                        }
-                    }
-                }
-            }
-            catch (Exception er)
-            {
-                string InnerErrorMessage = "";
-                string ErrorMessage = string.Concat(er.Message.ToString(), er.StackTrace.ToString());
-                if (er.InnerException != null)
-                {
-                    InnerErrorMessage = string.Concat(er.InnerException.Message.ToString(), er.InnerException.StackTrace.ToString());
-                }
-
-                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("FWloaderDevice_MethodLoadType", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
-            }
-            return methoType;
-        }
-
-        //Reset Legacy Devices using ARP_Helper
-        void LegacyUUT_UUTQuerryResetDefaultIP()
-        {
-            try
-            {
-                int index = 0;
-                //Reset IP for LegacyUUTs in the network
-                //step 1 : create Telnet Communication with UUT
-                //step 2 : Sent SIS *Q<ENTER> to query UUT FW
-                //step 3 : Sent SIS <ESC>ZQQQ<ENTER> to performce Mode5 reset
-                //Step 4 : Catch exception due to disconnect from local network to default network
-                //Setp 5 : Ping default IP to verify mode 5 reset successfull
-
-
-                //Query the UUT FW with static IP
-                Parallel.ForEach(UUTsList, item =>
-                {
-                    bool uutconnectingawait = true;
-                    DnsEndPoint dnsEndpoint = new DnsEndPoint(item.IpAddress, 23);
-                    TelnetSettings ts = new TelnetSettings(dnsEndpoint, item.Password);
-                    ExtronDevice ed = new ExtronDevice(ts);
-                    SISCommand sISCommand = new SISCommand("*Q" + "\x0D");                         
-                    while (uutconnectingawait)
-                    {
-                        int value = ++index;
-                        var connectState = ed.Connect(10000, ExtronDevice.ConnectionBehavior.Block);
-                        item.FWUpdateStatus = "Await Connection";
-                        if (connectState == ExtronDevice.DeviceState.Connected)
-                        {
-                            uutconnectingawait = false;
-                        }
-                        if (value > 5)
-                        {
-                            break;
-                        }
-                    }
-                    if(!uutconnectingawait)
-                    {
-                        var uutQueryFW = ed.SendSISCommand(sISCommand, ExtronDevice.ConnectionBehavior.Block);
-                        if (item.Version != uutQueryFW.StrResponse)
-                        {
-                            item.Version = uutQueryFW.StrResponse;
-                        }
-                        item.FWUpdateStatus = "Successful";
-                        ed.Disconnect();
-                    }
-                    
-                });
-
-                //Reset UUT 
-                Parallel.ForEach(UUTsList, item =>
-                {
-                    DnsEndPoint dnsEndpoint = new DnsEndPoint(item.IpAddress, 23);
-                    TelnetSettings ts = new TelnetSettings(dnsEndpoint, item.Password);
-                    ExtronDevice ed = new ExtronDevice(ts);
-                    var connectState = ed.Connect(10000, ExtronDevice.ConnectionBehavior.Block);
-                    SISCommand sISCommand = new SISCommand("\x1B" + "ZQQQ" + "\x0D");
-                    if (connectState == ExtronDevice.DeviceState.Connected)
-                    {                        
-                        item.IpAddress = item.DefaultIP;
-                        ed.SendSISCommandAsync(sISCommand);
-                    }
-                    else
-                    {
-                        item.FWUpdateStatus = "Failled to Reset UUT";
-                    }
-
-                });                
-            }
-            catch (Exception er)
-            {
-                string InnerErrorMessage = "";
-                string ErrorMessage = string.Concat(er.Message.ToString(), er.StackTrace.ToString());
-                if (er.InnerException != null)
-                {
-                    InnerErrorMessage = string.Concat(er.InnerException.Message.ToString(), er.InnerException.StackTrace.ToString());
-                }
-
-                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("LegacyUUT_UUTQuerryResetDefaultIP", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
-            }
-        }
-       
-        // Occurs when individual fw upgrade progress changed for Legacy Product
-        void CDAFirmwareUploadSession_DeviceTransferProgress(object sender, Extron.Communication.FirmwareTransfer.DeviceFirmwareProgress e)
-        {
-            try
-            {
-                Parallel.ForEach(UUTsList, item =>
-                {
-                    if (item.IpAddress == e.Device.ToString().Replace("ExtronDevice: ", "").Replace(":23", ""))
-                    {
-                        item.FWProgressStatus = e.PercentageCompleted;
-                    }
-                });
-            }
-            catch (Exception a)
-            {
-                string InnerErrorMessage = "";
-                string ErrorMessage = string.Concat(a.Message.ToString(), a.StackTrace.ToString());
-                if (a.InnerException != null)
-                {
-                    InnerErrorMessage = string.Concat(a.InnerException.Message.ToString(), a.InnerException.StackTrace.ToString());
-                }
-                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("CDAFirmwareUploadSession_DeviceTransferProgress", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
-            }
-        }
-
-        // Occurs when individual legacy device upgrade completed
-        void CDAFirmwareUploadSession_DeviceUploadCompleted(object sender, ExtronDevice device)
-        {
-            try
-            {
-                Parallel.ForEach(UUTsList, item =>
-                {
-                    if (item.IpAddress == device.TelnetSetting.HostDnsEndPoint.Host.ToString())
-                    {
-                        item.Version = device.FirmwareVersion;
-                    }
-                });
-            }
-            catch (Exception a)
-            {
-                string InnerErrorMessage = "";
-                string ErrorMessage = string.Concat(a.Message.ToString(), a.StackTrace.ToString());
-                if (a.InnerException != null)
-                {
-                    InnerErrorMessage = string.Concat(a.InnerException.Message.ToString(), a.InnerException.StackTrace.ToString());
-                }
-
-                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("CDAFirmwareUploadSession_DeviceUploadCompleted", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
-            }
-        }
-
-        // Occurs when individual legacy device Failed to Upload
-        void CDAFirmwareUploadSession_DeviceFailedToUpload(object sender, FailedDevice device)
-        {
-            try
-            {
-                foreach (MainModel item in UUTsList)
-                {
-                    if (item.IpAddress == device.Device.TelnetSetting.HostDnsEndPoint.Host.ToString())
-                    {
-                        string a = device.Status.ToString();
-                        if (device.Status.ToString() == "FailedToVerifyUpload")
-                        {
-                            item.FWUpdateStatus = "FAIL - Await for Record";
-                            item.progressVisibility = Visibility.Collapsed;
-                            item.PassVisibility = Visibility.Collapsed;
-                            item.FailVisibility = Visibility.Visible;
-                            new Task(() =>
-                            {
-                                FailedDeviceList(item.PartNumber, item.SerialNumber, item.MacAddress, device.Status.ToString(), device.Status.ToString());
-
-                            }).Start();
-                        }
-                        else
-                        {
-                            item.FWUpdateStatus = "Successful";
-                        }
-                    }
-                }
-            }
-            catch (Exception a)
-            {
-                string InnerErrorMessage = "";
-                string ErrorMessage = string.Concat(a.Message.ToString(), a.StackTrace.ToString());
-                if (a.InnerException != null)
-                {
-                    InnerErrorMessage = string.Concat(a.InnerException.Message.ToString(), a.InnerException.StackTrace.ToString());
-                }
-
-                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("CDAFirmwareUploadSession_DeviceFailedToUpload", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
-            }
-        }
-
-        // Occurs when there changes in process
-        void LegacyUploaderService_StatisticsChanged(int staticttypechanged)
-        {
-            try
-            {              
-                if (staticttypechanged == 1)
-                {
-                    TotalUUTReport++;
-                }
-                if (staticttypechanged == 2)
-                {
-                    SuccessReport++;
-                    InProgressReport -= 1;
-                }
-                if (staticttypechanged == 3)
-                {
-                    FailedReport++;
-                    InProgressReport -= 1;
-                }
-                if (staticttypechanged == 4)
-                {
-                    InProgressReport++;
-                }
-                if (staticttypechanged == 5)
-                {
-                    TotalUUTReport = 0;
-                    SuccessReport = 0;
-                    FailedReport = 0;
-                    InProgressReport = 0;
-                }
-            }
-            catch (Exception a)
-            {
-                string InnerErrorMessage = "";
-                string ErrorMessage = string.Concat(a.Message.ToString(), a.StackTrace.ToString());
-                if (a.InnerException != null)
-                {
-                    InnerErrorMessage = string.Concat(a.InnerException.Message.ToString(), a.InnerException.StackTrace.ToString());
-                }
-
-                ExpressFWLoaderError.ExpressFWLoaderErrorMessenger("LegacyUploaderService_StatisticsChanged", ErrorMessage, InnerErrorMessage, UserName_tbTEXT);
-            }
-            
-
-        }
-
-        //Getting SerialNumber of UUT from Avante using MACaddress
-        private string MACaddressToSerialNumberFromAvante(string macaddress)
-        {
-            string[] avanteresponded = avanteconnect.GetAvanteInfo(macaddress, "", true, false);
-            string SNfromMAC = avanteresponded[2].ToString().Substring(0, 7);
-            return SNfromMAC;
-        }
         #endregion
     }
 }
