@@ -7,10 +7,14 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
         Title="Express Gang Loader" Height="650" Width="1700" WindowStartupLocation="CenterScreen" ResizeMode="CanResizeWithGrip">
-   
 
-    <Grid Background="LightGray">        
-        <Grid x:Name="GridPrincipal" Margin="100,5,5,0">
+
+    <Grid Background="LightGray">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="559*"/>
+            <ColumnDefinition Width="1134*"/>
+        </Grid.ColumnDefinitions>
+        <Grid x:Name="GridPrincipal" Margin="100,5,5,0" Grid.ColumnSpan="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="5"/>
                 <RowDefinition/>
@@ -56,7 +60,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        
+
                         <DataGridTextColumn Header="Status" FontSize="15" Binding="{Binding FWUpdateStatus , UpdateSourceTrigger=PropertyChanged}" Width="*">
                             <DataGridTextColumn.HeaderStyle>
                                 <Style
@@ -198,11 +202,9 @@
                     <Button Height="60" BorderThickness="0" Foreground="White" Background="Transparent" Focusable="False" Content="{materialDesign:PackIcon Kind=LayersClear}" Command="{Binding ClearArpExecute_Command,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"></Button>
                     <Button BorderThickness="0" Height="30" VerticalAlignment="Bottom" Foreground="White" Background="Transparent" IsHitTestVisible ="False" Focusable="False" Content="Clear Arp"></Button>
                 </Grid>
-
             </StackPanel>
-            
         </Grid>
-        <Grid>
+        <Grid Grid.ColumnSpan="2">
             <materialDesign:DialogHost Identifier="FixtureSettingDialog"/>
         </Grid>
     </Grid>
